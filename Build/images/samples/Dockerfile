@@ -2,7 +2,7 @@
 # https://github.com/microsoft/iqsharp/blob/main/images/iqsharp-base/Dockerfile.
 # As per Binder documentation, we choose to use an SHA sum here instead of a
 # tag.
-FROM mcr.microsoft.com/quantum/iqsharp-base:0.27.238334
+FROM mcr.microsoft.com/quantum/iqsharp-base:0.28.302812
 
 # Mark that this Dockerfile is used with the samples repository.
 ENV IQSHARP_HOSTING_ENV=SAMPLES_DOCKERFILE
@@ -34,7 +34,7 @@ RUN apt-get -y update && \
     cp /etc/apt/sources.list /etc/apt/sources.list.backup && \
     echo "deb https://deb.debian.org/debian unstable main" >> /etc/apt/sources.list && \
     apt-get -y update && \
-    apt-get -y install ca-certificates=20211016 && \
+    apt-get -y install ca-certificates && \
     mv /etc/apt/sources.list.backup /etc/apt/sources.list && \
     apt-get clean && rm -rf /var/lib/apt/lists/
 
@@ -42,18 +42,19 @@ RUN apt-get -y update && \
 # installed. It tends to be more stable to use the .NET Core SDK to do so than
 # to use the Debian package manager, due to issues with syncing libicu
 # dependencies.
-RUN dotnet tool install --global PowerShell --version 7.2.4
+RUN dotnet tool install --global PowerShell --version 7.2.11
 
 # Install Jupytext to expose Markdown files as Jupyter Notebooks for use with
 # Binder.
 RUN pip install jupytext
 # Make the C# and PowerShell kernels available to Jupytext as well.
-RUN dotnet tool install -g --add-source "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json" Microsoft.dotnet-interactive && \
+# N.B. The command below grabs the latest version of Microsoft.dotnet-interactive by default,
+# but the versions after 1.0.355307 have dropped the support of .NET 6.0.
+# TODO(kuzminrobin): After we migrate to .NET 7.0+, consider removing the fragment "--version 1.0.355307" below.
+RUN dotnet tool install -g \
+        --add-source "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json" \
+        Microsoft.dotnet-interactive --version 1.0.355307 && \
     dotnet interactive jupyter install
-
-# On .NET 5 and later, we need to make sure that NuGet cache files are owned
-# by the notebook user and not by root.
-RUN chown -R ${USER}:${USER} /tmp/NuGetScratch
 
 # Install additional Python dependencies for the PythonInterop sample.
 # Note that QuTiP has as a hard requirement that its dependencies must be
